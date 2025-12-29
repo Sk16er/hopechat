@@ -40,12 +40,7 @@ Then visit the URL shown (e.g., `http://<node-ip>:8000/`). Talk to your HOPE mod
 You can also view the `report.md` file generated in the project directory for a "report card" of the run, including CORE scores, ARC benchmarks, and training stats.
 
 ```
-| Metric          | BASE     | MID      | SFT      | RLVR     |
-|-----------------|----------|----------|----------|----------|
-| CORE            | 0.2219   | -        | -        | -        |
-| ARC-Challenge   | -        | 0.2875   | 0.2807   | -        |
-| ARC-Easy        | -        | 0.3561   | 0.3876   | -        |
-| GSM8K           | -        | 0.0250   | 0.0455   | 0.0758   |
+will be updated whn i train the model
 ```
 
 ## Bigger models
@@ -122,3 +117,4 @@ hopechat is an experimental research repo. We welcome PRs that optimize the Nest
 ## License
 
 MIT
+
