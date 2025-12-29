@@ -1,6 +1,6 @@
 """
-Borrowed from modded-nanogpt. By Keller, @vagrawal, et al.
-Not a general optimizer! But works for our specific use.
+Distributed AdamW Optimizer.
+Optimizes the "slow weights" (Level 2) of the HOPE architecture.
 """
 import torch
 import torch.distributed as dist

@@ -10,7 +10,7 @@
 
 # all the setup stuff
 export OMP_NUM_THREADS=1
-export NANOCHAT_BASE_DIR="$HOME/.cache/nanochat"
+export NANOCHAT_BASE_DIR="$HOME/.cache/hopechat"
 mkdir -p $NANOCHAT_BASE_DIR
 command -v uv &> /dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
 [ -d ".venv" ] || uv venv
@@ -24,10 +24,10 @@ source "$HOME/.cargo/env"
 uv run maturin develop --release --manifest-path rustbpe/Cargo.toml
 
 # wipe the report
-python -m nanochat.report reset
+python -m hopechat.report reset
 
 # train tokenizer on ~1B characters
-python -m nanochat.dataset -n 4
+python -m hopechat.dataset -n 4
 python -m scripts.tok_train --max_chars=1000000000
 python -m scripts.tok_eval
 
@@ -74,4 +74,4 @@ python -m scripts.chat_sft \
 # Chat Web
 # python -m scripts.chat_web
 
-python -m nanochat.report generate
+python -m hopechat.report generate

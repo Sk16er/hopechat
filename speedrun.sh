@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# This script is the "Best ChatGPT clone that $100 can buy",
-# It is designed to run in ~4 hours on 8XH100 node at $3/GPU/hour.
+# HOPE: Hierarchical Optimizing Processing Ensemble
+# A self-modifying, multi-scale learning architecture.
 
 # 1) Example launch (simplest):
 # bash speedrun.sh
@@ -10,10 +10,10 @@
 # 3) Example launch with wandb logging, but see below for setting up wandb first:
 # WANDB_RUN=speedrun screen -L -Logfile speedrun.log -S speedrun bash speedrun.sh
 
-# Default intermediate artifacts directory is in ~/.cache/nanochat
+# Default intermediate artifacts directory is in ~/.cache/hopechat
 export OMP_NUM_THREADS=1
-export NANOCHAT_BASE_DIR="$HOME/.cache/nanochat"
-mkdir -p $NANOCHAT_BASE_DIR
+export HOPE_BASE_DIR="$HOME/.cache/hopechat"
+mkdir -p $HOPE_BASE_DIR
 
 # -----------------------------------------------------------------------------
 # Python venv setup with uv
@@ -43,7 +43,7 @@ fi
 # During the course of the run, we will be writing markdown reports to the report/
 # directory in the base dir. This command clears it out and writes a header section
 # with a bunch of system info and a timestamp that marks the start of the run.
-python -m nanochat.report reset
+python -m hopechat.report reset
 
 # -----------------------------------------------------------------------------
 # Tokenizer
@@ -60,10 +60,10 @@ uv run maturin develop --release --manifest-path rustbpe/Cargo.toml
 # each data shard is ~250M chars
 # so we download 2e9 / 250e6 = 8 data shards at this point
 # each shard is ~100MB of text (compressed), so this is about ~800MB of data on disk
-python -m nanochat.dataset -n 8
+python -m hopechat.dataset -n 8
 # Immediately also kick off downloading more shards in the background while tokenizer trains
 # See comment below for why 240 is the right number here
-python -m nanochat.dataset -n 240 &
+python -m hopechat.dataset -n 240 &
 DATASET_DOWNLOAD_PID=$!
 # train the tokenizer with vocab size 2**16 = 65536 on ~2B characters of data
 python -m scripts.tok_train --max_chars=2000000000
@@ -95,9 +95,8 @@ torchrun --standalone --nproc_per_node=$NPROC_PER_NODE -m scripts.base_eval
 # -----------------------------------------------------------------------------
 # Midtraining (teach the model conversation special tokens, tool use, multiple choice)
 
-# download 2.3MB of synthetic identity conversations to impart a personality to nanochat
-# see dev/gen_synthetic_data.py for details on how this data was prepared and to get a sense of how you can easily tune it
-curl -L -o $NANOCHAT_BASE_DIR/identity_conversations.jsonl https://karpathy-public.s3.us-west-2.amazonaws.com/identity_conversations.jsonl
+# download identity conversations
+curl -L -o $HOPE_BASE_DIR/identity_conversations.jsonl https://karpathy-public.s3.us-west-2.amazonaws.com/identity_conversations.jsonl
 
 # run midtraining and eval the model
 torchrun --standalone --nproc_per_node=$NPROC_PER_NODE -m scripts.mid_train -- --run=$WANDB_RUN
@@ -113,8 +112,16 @@ torchrun --standalone --nproc_per_node=$NPROC_PER_NODE -m scripts.chat_eval -- -
 # chat with the model over CLI! Leave out the -p to chat interactively
 # python -m scripts.chat_cli -p "Why is the sky blue?"
 
-# even better, chat with your model over a pretty WebUI ChatGPT style
+# even better, chat with your model over a pretty WebUI
 # python -m scripts.chat_web
+
+# -----------------------------------------------------------------------------
+# Reinforcement Learning from Verifiable Rewards (RLVR)
+# Train on math/code puzzles using the code sandbox
+
+torchrun --standalone --nproc_per_node=$NPROC_PER_NODE -m scripts.chat_rlvr
+# eval the RLVR model
+torchrun --standalone --nproc_per_node=$NPROC_PER_NODE -m scripts.chat_eval -- -i rlvr -a GSM8K
 
 # -----------------------------------------------------------------------------
 # Reinforcement Learning. Optional, and currently only on GSM8K
@@ -128,4 +135,4 @@ torchrun --standalone --nproc_per_node=$NPROC_PER_NODE -m scripts.chat_eval -- -
 # -----------------------------------------------------------------------------
 # Generate the full report by putting together all the sections
 # report.md is the output and will be copied to current directory for convenience
-python -m nanochat.report generate
+python -m hopechat.report generate

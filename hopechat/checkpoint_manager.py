@@ -8,10 +8,10 @@ import json
 import logging
 import torch
 
-from nanochat.common import get_base_dir
-from nanochat.gpt import GPT, GPTConfig
-from nanochat.tokenizer import get_tokenizer
-from nanochat.common import setup_default_logging
+from hopechat.common import get_base_dir
+from hopechat.ensemble import HOPEEnsemble, HOPEConfig
+from hopechat.tokenizer import get_tokenizer
+from hopechat.common import setup_default_logging
 
 # Set up logging
 setup_default_logging()
@@ -75,9 +75,9 @@ def build_model(checkpoint_dir, step, device, phase):
     model_data = {k.removeprefix("_orig_mod."): v for k, v in model_data.items()}
     model_config_kwargs = meta_data["model_config"]
     log0(f"Building model with config: {model_config_kwargs}")
-    model_config = GPTConfig(**model_config_kwargs)
+    model_config = HOPEConfig(**model_config_kwargs)
     with torch.device("meta"):
-        model = GPT(model_config)
+        model = HOPEEnsemble(model_config)
     # Load the model state
     model.to_empty(device=device)
     model.init_weights() # note: this is dumb, but we need to init the rotary embeddings. TODO: fix model re-init
@@ -123,7 +123,7 @@ def find_last_step(checkpoint_dir):
     return last_step
 
 # -----------------------------------------------------------------------------
-# convenience functions that take into account nanochat's directory structure
+# convenience functions that take into account hopechat's directory structure
 
 def load_model_from_dir(checkpoints_dir, device, phase, model_tag=None, step=None):
     if model_tag is None:

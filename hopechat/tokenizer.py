@@ -1,5 +1,5 @@
 """
-BPE Tokenizer in the style of GPT-4.
+BPE Tokenizer in the style of Modern BPE (e.g. GPT-4).
 
 Two implementations are available:
 1) HuggingFace Tokenizer that can do both training and inference but is really confusing
@@ -24,13 +24,13 @@ SPECIAL_TOKENS = [
     "<|output_end|>",
 ]
 
-# NOTE: this split pattern deviates from GPT-4 in that we use \p{N}{1,2} instead of \p{N}{1,3}
+# NOTE: this split pattern deviates from standard GPT-4 in that we use \p{N}{1,2} instead of \p{N}{1,3}
 # I did this because I didn't want to "waste" too many tokens on numbers for smaller vocab sizes.
 # I haven't validated that this is actually a good idea, TODO.
 SPLIT_PATTERN = r"""'(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}+|\p{N}{1,2}| ?[^\s\p{L}\p{N}]++[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s+"""
 
 # -----------------------------------------------------------------------------
-# Generic GPT-4-style tokenizer based on HuggingFace Tokenizer
+# Generic Modern BPE-style tokenizer based on HuggingFace Tokenizer
 from tokenizers import Tokenizer as HFTokenizer
 from tokenizers import pre_tokenizers, decoders, Regex
 from tokenizers.models import BPE
@@ -66,14 +66,14 @@ class HuggingFaceTokenizer:
         ))
         # Normalizer: None
         tokenizer.normalizer = None
-        # Pre-tokenizer: GPT-4 style
-        # the regex pattern used by GPT-4 to split text into groups before BPE
+        # Pre-tokenizer: Modern BPE style
+        # the regex pattern used to split text into groups before BPE
         # NOTE: The pattern was changed from \p{N}{1,3} to \p{N}{1,2} because I suspect it is harmful to
         # very small models and smaller vocab sizes, because it is a little bit wasteful in the token space.
         # (but I haven't validated this! TODO)
-        gpt4_split_regex = Regex(SPLIT_PATTERN) # huggingface demands that you wrap it in Regex!!
+        split_regex = Regex(SPLIT_PATTERN) # huggingface demands that you wrap it in Regex!!
         tokenizer.pre_tokenizer = pre_tokenizers.Sequence([
-            pre_tokenizers.Split(pattern=gpt4_split_regex, behavior="isolated", invert=False),
+            pre_tokenizers.Split(pattern=split_regex, behavior="isolated", invert=False),
             pre_tokenizers.ByteLevel(add_prefix_space=False, use_regex=False)
         ])
         # Decoder: ByteLevel (it pairs together with the ByteLevel pre-tokenizer)
@@ -195,7 +195,7 @@ class RustBPETokenizer:
         # tiktoken calls the special document delimiter token "<|endoftext|>"
         # yes this is confusing because this token is almost always PREPENDED to the beginning of the document
         # it most often is used to signal the start of a new sequence to the LLM during inference etc.
-        # so in nanoChat we always use "<|bos|>" short for "beginning of sequence", but historically it is often called "<|endoftext|>".
+        # so in HOPE we always use "<|bos|>" short for "beginning of sequence", but historically it is often called "<|endoftext|>".
         return cls(enc, "<|endoftext|>")
 
     def get_vocab_size(self):
@@ -377,10 +377,10 @@ class RustBPETokenizer:
         return ids
 
 # -----------------------------------------------------------------------------
-# nanochat-specific convenience functions
+# hopechat-specific convenience functions
 
 def get_tokenizer():
-    from nanochat.common import get_base_dir
+    from hopechat.common import get_base_dir
     base_dir = get_base_dir()
     tokenizer_dir = os.path.join(base_dir, "tokenizer")
     # return HuggingFaceTokenizer.from_directory(tokenizer_dir)
@@ -388,7 +388,7 @@ def get_tokenizer():
 
 def get_token_bytes(device="cpu"):
     import torch
-    from nanochat.common import get_base_dir
+    from hopechat.common import get_base_dir
     base_dir = get_base_dir()
     tokenizer_dir = os.path.join(base_dir, "tokenizer")
     token_bytes_path = os.path.join(tokenizer_dir, "token_bytes.pt")

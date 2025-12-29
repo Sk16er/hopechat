@@ -1,5 +1,5 @@
 """
-Task intended to make nanochat better in spelling and counting, for example:
+Task intended to make hopechat better in spelling and counting, for example:
 
 "How many r are in strawberry?" -> 3
 
@@ -29,7 +29,7 @@ python -m tasks.spellingbee
 import re
 import random
 from tasks.common import Task
-from nanochat.common import download_file_with_lock
+from hopechat.common import download_file_with_lock
 
 # Letters of the alphabet
 LETTERS = "abcdefghijklmnopqrstuvwxyz"
@@ -301,7 +301,7 @@ if __name__ == "__main__":
     #     print(ex['messages'][1]['content'])
 
     # # also scrutinize the tokenization (last example only)
-    # from nanochat.tokenizer import get_tokenizer
+    # from hopechat.tokenizer import get_tokenizer
     # tokenizer = get_tokenizer()
     # ids, mask = tokenizer.render_conversation(ex)
     # print(tokenizer.visualize_tokenization(ids, mask, with_token_id=True))

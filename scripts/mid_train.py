@@ -16,11 +16,11 @@ import time
 import wandb
 import torch
 from contextlib import nullcontext
-from nanochat.common import compute_init, compute_cleanup, print0, DummyWandb, get_base_dir, autodetect_device_type
-from nanochat.tokenizer import get_token_bytes
-from nanochat.checkpoint_manager import save_checkpoint
-from nanochat.loss_eval import evaluate_bpb
-from nanochat.checkpoint_manager import load_model
+from hopechat.common import compute_init, compute_cleanup, print0, DummyWandb, get_base_dir, autodetect_device_type
+from hopechat.tokenizer import get_token_bytes
+from hopechat.checkpoint_manager import save_checkpoint
+from hopechat.loss_eval import evaluate_bpb
+from hopechat.checkpoint_manager import load_model
 import torch.distributed as dist
 
 from tasks.common import TaskMixture
@@ -49,7 +49,7 @@ eval_tokens = 20*524288
 total_batch_size = 524288
 dry_run = 0 # dry_run=1 is for experiments: we will log to wandb but we won't write checkpoints or report
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str))]
-exec(open(os.path.join('nanochat', 'configurator.py')).read()) # overrides from command line or config file
+exec(open(os.path.join('hopechat', 'configurator.py')).read()) # overrides from command line or config file
 user_config = {k: globals()[k] for k in config_keys} # possibly useful for logging
 # -----------------------------------------------------------------------------
 
@@ -63,7 +63,7 @@ get_max_memory = torch.cuda.max_memory_allocated if device_type == "cuda" else l
 
 # wandb logging init
 use_dummy_wandb = run == "dummy" or not master_process
-wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(project="nanochat-mid", name=run, config=user_config)
+wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(project="hopechat-mid", name=run, config=user_config)
 
 # Load the model and tokenizer
 model, tokenizer, meta = load_model("base", device, phase="train", model_tag=model_tag, step=step)
@@ -294,7 +294,7 @@ print0(f"Minimum validation bpb: {min_val_bpb:.4f}")
 
 # Log to report
 if not dry_run:
-    from nanochat.report import get_report
+    from hopechat.report import get_report
     get_report().log(section="Midtraining", data=[
         user_config, # CLI args
         { # stats about the training setup

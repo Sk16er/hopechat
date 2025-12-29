@@ -19,13 +19,13 @@ from contextlib import nullcontext
 import wandb
 import torch
 
-from nanochat.gpt import GPT, GPTConfig
-from nanochat.dataloader import tokenizing_distributed_data_loader, tokenizing_distributed_data_loader_with_state
-from nanochat.common import compute_init, compute_cleanup, print0, DummyWandb, print_banner, get_base_dir, autodetect_device_type
-from nanochat.tokenizer import get_tokenizer, get_token_bytes
-from nanochat.checkpoint_manager import save_checkpoint, load_checkpoint
-from nanochat.loss_eval import evaluate_bpb
-from nanochat.engine import Engine
+from hopechat.ensemble import HOPEEnsemble, HOPEConfig
+from hopechat.dataloader import tokenizing_distributed_data_loader, tokenizing_distributed_data_loader_with_state
+from hopechat.common import compute_init, compute_cleanup, print0, DummyWandb, print_banner, get_base_dir, autodetect_device_type
+from hopechat.tokenizer import get_tokenizer, get_token_bytes
+from hopechat.checkpoint_manager import save_checkpoint, load_checkpoint
+from hopechat.loss_eval import evaluate_bpb
+from hopechat.engine import Engine
 from scripts.base_eval import evaluate_model
 print_banner()
 
@@ -35,7 +35,7 @@ run = "dummy" # wandb run name default ("dummy" is special - we won't log to wan
 # Runtime
 device_type = "" # cuda|cpu|mps (empty => autodetect good device type default, in order: CUDA > MPS > CPU)
 # Model architecture
-depth = 20 # the depth of the Transformer model to train, rest of the kwargs are derived
+depth = 20 # the depth of the HOPE model to train, rest of the kwargs are derived
 max_seq_len = 2048 # max context length
 # Training horizon. Only one of these 3 will be used, in this order of precedence.
 num_iterations = -1 # explicit number of steps of the optimization (-1 = disable)
@@ -48,6 +48,7 @@ embedding_lr = 0.2 # learning rate for the embedding parameters (Adam)
 unembedding_lr = 0.004 # learning rate for the unembedding parameters (Adam)
 weight_decay = 0.0 # weight decay for the embedding/unembedding parameters (Adam)
 matrix_lr = 0.02 # learning rate for the matrix parameters (Muon)
+meta_lr = 0.001 # learning rate for the meta parameters
 grad_clip = 1.0 # gradient clipping value (0.0 = disabled)
 warmup_ratio = 0.0 # ratio of iterations for LR warmup
 warmdown_ratio = 0.2 # ratio of iterations for LR warmdown
@@ -64,7 +65,7 @@ save_every = -1 # every how many steps to save model checkpoints (-1 = disable, 
 model_tag = "" # optionally override the model tag for the output checkpoint directory name
 # now allow CLI to override the settings via the configurator lol
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str))]
-exec(open(os.path.join('nanochat', 'configurator.py')).read()) # overrides from command line or config file
+exec(open(os.path.join('hopechat', 'hope_config.py')).read()) # overrides from command line or config file
 user_config = {k: globals()[k] for k in config_keys} # will be useful for logging
 # -----------------------------------------------------------------------------
 
@@ -78,7 +79,7 @@ get_max_memory = torch.cuda.max_memory_allocated if device_type == "cuda" else l
 
 # wandb logging init
 use_dummy_wandb = run == "dummy" or not master_process
-wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(project="nanochat", name=run, config=user_config)
+wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(project="hopechat", name=run, config=user_config)
 
 # Tokenizer will be useful for evaluation, also we need the vocab size
 tokenizer = get_tokenizer()
@@ -112,8 +113,8 @@ print0(f"Total batch size {total_batch_size:,} => gradient accumulation steps: {
 # Create a new model with random weights
 model_config_kwargs = dict(sequence_len=max_seq_len, vocab_size=vocab_size, n_layer=num_layers, n_head=num_heads, n_kv_head=num_kv_heads, n_embd=model_dim)
 with torch.device("meta"):
-    model_config = GPTConfig(**model_config_kwargs)
-    model = GPT(model_config)
+    model_config = HOPEConfig(**model_config_kwargs)
+    model = HOPEEnsemble(model_config)
 model.to_empty(device=device)
 model.init_weights()
 
@@ -157,7 +158,7 @@ print0(f"Total training FLOPs estimate: {num_flops_per_token * total_tokens:e}")
 
 # -----------------------------------------------------------------------------
 # Initialize the Optimizer (Muon for Linear layers, AdamW for embedding and lm_head)
-optimizers = model.setup_optimizers(unembedding_lr=unembedding_lr, embedding_lr=embedding_lr, matrix_lr=matrix_lr, weight_decay=weight_decay)
+optimizers = model.setup_optimizers(unembedding_lr=unembedding_lr, embedding_lr=embedding_lr, matrix_lr=matrix_lr, meta_lr=meta_lr, weight_decay=weight_decay)
 adamw_optimizer, muon_optimizer = optimizers
 
 if resuming:
@@ -327,6 +328,12 @@ while True:
     for opt in optimizers:
         opt.step()
     model.zero_grad(set_to_none=True)
+    
+    # Dynamic Growth Check
+    if hasattr(orig_model, 'meta_controller'):
+        if orig_model.meta_controller.check_growth(debiased_smooth_loss):
+            print0(f"Dynamic Hierarchy Growth! New levels: {orig_model.meta_controller.current_levels}")
+
     synchronize()
     t1 = time.time()
     dt = t1 - t0
@@ -355,6 +362,7 @@ while True:
             "train/dt": dt,
             "train/tok_per_sec": tok_per_sec,
             "train/mfu": mfu,
+            "train/levels": orig_model.meta_controller.current_levels if hasattr(orig_model, 'meta_controller') else depth,
         }
         if grad_clip_enabled:
             log_data["train/grad_norm"] = grad_norm
@@ -369,7 +377,7 @@ print0(f"Total training time: {total_training_time/60:.2f}m")
 print0(f"Minimum validation bpb: {min_val_bpb:.4f}")
 
 # Log to report
-from nanochat.report import get_report
+from hopechat.report import get_report
 get_report().log(section="Base model training", data=[
     user_config, # CLI args
     { # stats about the training setup

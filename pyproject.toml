@@ -1,5 +1,5 @@
 [project]
-name = "nanochat"
+name = "hopechat"
 version = "0.1.0"
 description = "the minimal full-stack ChatGPT clone"
 readme = "README.md"

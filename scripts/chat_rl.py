@@ -23,9 +23,9 @@ import wandb
 import torch
 import torch.distributed as dist
 
-from nanochat.common import compute_init, compute_cleanup, print0, get_base_dir, DummyWandb
-from nanochat.checkpoint_manager import save_checkpoint, load_model
-from nanochat.engine import Engine
+from hopechat.common import compute_init, compute_cleanup, print0, get_base_dir, DummyWandb
+from hopechat.checkpoint_manager import save_checkpoint, load_model
+from hopechat.engine import Engine
 from tasks.gsm8k import GSM8K
 
 # RL hyperparameters
@@ -51,7 +51,7 @@ eval_every = 60 # every how many steps to evaluate the model for val pass@k
 eval_examples = 400 # number of examples used for evaluating pass@k
 # now allow CLI to override the settings via the configurator lol
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str))]
-exec(open(os.path.join('nanochat', 'configurator.py')).read()) # overrides from command line or config file
+exec(open(os.path.join('hopechat', 'hope_config.py')).read()) # overrides from command line or config file
 user_config = {k: globals()[k] for k in config_keys} # will be useful for logging
 # -----------------------------------------------------------------------------
 
@@ -63,7 +63,7 @@ autocast_ctx = torch.amp.autocast(device_type="cuda", dtype=dtype)
 
 # wandb logging init
 use_dummy_wandb = run == "dummy" or not master_process
-wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(project="nanochat-rl", name=run, config=user_config)
+wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(project="hopechat-rl", name=run, config=user_config)
 
 # Init model and tokenizer
 model, tokenizer, meta = load_model(source, device, phase="eval", model_tag=model_tag, step=step)
@@ -311,7 +311,7 @@ for step in range(num_steps):
         depth = model.config.n_layer
         output_dirname = model_tag if model_tag else f"d{depth}" # base the model tag on the depth of the base model
         checkpoint_dir = os.path.join(base_dir, "chatrl_checkpoints", output_dirname)
-        model_config_kwargs = model.config.__dict__ # slightly naughty, abusing the simplicity of GPTConfig, TODO nicer
+        model_config_kwargs = model.config.__dict__ # slightly naughty, abusing the simplicity of HOPEConfig, TODO nicer
         save_checkpoint(
             checkpoint_dir,
             step,
@@ -324,7 +324,7 @@ for step in range(num_steps):
         print(f"✅ Saved model checkpoint to {checkpoint_dir}")
 
 # Log to report
-from nanochat.report import get_report
+from hopechat.report import get_report
 get_report().log(section="Chat RL", data=[
     user_config, # CLI args
 ])

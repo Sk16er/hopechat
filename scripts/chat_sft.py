@@ -17,10 +17,10 @@ import torch
 import torch.distributed as dist
 from contextlib import nullcontext
 
-from nanochat.common import compute_init, compute_cleanup, get_base_dir, print0, DummyWandb, autodetect_device_type
-from nanochat.checkpoint_manager import load_model
-from nanochat.checkpoint_manager import save_checkpoint
-from nanochat.engine import Engine
+from hopechat.common import compute_init, compute_cleanup, get_base_dir, print0, DummyWandb, autodetect_device_type
+from hopechat.checkpoint_manager import load_model
+from hopechat.checkpoint_manager import save_checkpoint
+from hopechat.engine import Engine
 from scripts.chat_eval import run_chat_eval
 
 from tasks.common import TaskMixture
@@ -57,7 +57,7 @@ eval_metrics_every = 200
 eval_metrics_max_problems = 1024
 # now allow CLI to override the settings via the configurator lol
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str))]
-exec(open(os.path.join('nanochat', 'configurator.py')).read()) # overrides from command line or config file
+exec(open(os.path.join('hopechat', 'hope_config.py')).read()) # overrides from command line or config file
 user_config = {k: globals()[k] for k in config_keys} # possibly useful for logging
 # -----------------------------------------------------------------------------
 
@@ -70,7 +70,7 @@ autocast_ctx = torch.amp.autocast(device_type=device_type, dtype=ptdtype) if dev
 
 # wandb logging init
 use_dummy_wandb = run == "dummy" or not master_process
-wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(project="nanochat-sft", name=run, config=user_config, save_code=True)
+wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(project="hopechat-sft", name=run, config=user_config, save_code=True)
 
 # Load the model and tokenizer
 model, tokenizer, meta = load_model(source, device, phase="train", model_tag=model_tag, step=step)
@@ -252,7 +252,7 @@ if master_process:
     depth = model.config.n_layer
     output_dirname = model_tag if model_tag else f"d{depth}" # e.g. d12
     checkpoint_dir = os.path.join(base_dir, "chatsft_checkpoints", output_dirname)
-    model_config_kwargs = model.config.__dict__ # slightly naughty, abusing the simplicity of GPTConfig, TODO nicer
+    model_config_kwargs = model.config.__dict__ # slightly naughty, abusing the simplicity of HOPEConfig, TODO nicer
     save_checkpoint(
         checkpoint_dir,
         step,
@@ -268,7 +268,7 @@ if master_process:
     print(f"✅ Saved model checkpoint to {checkpoint_dir}")
 
 # Log to report
-from nanochat.report import get_report
+from hopechat.report import get_report
 get_report().log(section="Chat SFT", data=[
     user_config, # CLI args
     {

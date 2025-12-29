@@ -5,7 +5,7 @@ python -m pytest tests/test_engine.py -v
 """
 
 import torch
-from nanochat.engine import KVCache, Engine
+from hopechat.engine import KVCache, Engine
 from dataclasses import dataclass
 
 
@@ -88,7 +88,7 @@ class ByteTokenizer:
 def test_kv_cache_resize():
     """
     The KV cache was not resized correctly, more information here:
-    https://github.com/karpathy/nanochat/pull/186
+    https://github.com/karpathy/hopechat/pull/186
     This test reproduces the issue and will be merged alongside the fix.
     """
 

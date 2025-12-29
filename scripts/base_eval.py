@@ -22,13 +22,13 @@ from contextlib import nullcontext
 
 import torch
 
-from nanochat.common import compute_init, compute_cleanup, print0, get_base_dir, autodetect_device_type, download_file_with_lock
-from nanochat.tokenizer import HuggingFaceTokenizer
-from nanochat.checkpoint_manager import load_model
-from nanochat.core_eval import evaluate_task
+from hopechat.common import compute_init, compute_cleanup, print0, get_base_dir, autodetect_device_type, download_file_with_lock
+from hopechat.tokenizer import HuggingFaceTokenizer
+from hopechat.checkpoint_manager import load_model
+from hopechat.core_eval import evaluate_task
 
 # -----------------------------------------------------------------------------
-# nanochat specific function dealing with I/O etc.
+# hopechat specific function dealing with I/O etc.
 
 # ~162MB of data needed to evaluate the CORE metric
 EVAL_BUNDLE_URL = "https://karpathy-public.s3.us-west-2.amazonaws.com/eval_bundle.zip"
@@ -199,7 +199,7 @@ def main():
             print0(f.read())
 
     # Log to report
-    from nanochat.report import get_report
+    from hopechat.report import get_report
     get_report().log(section="Base model evaluation", data=[
         {
             "Model": model_name,

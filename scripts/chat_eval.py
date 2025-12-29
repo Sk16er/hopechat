@@ -1,7 +1,7 @@
 """
 Evaluate the Chat model.
 All the generic code lives here, and all the evaluation-specific
-code lives in nanochat directory and is imported from here.
+code lives in hopechat directory and is imported from here.
 
 Example runs:
 python -m scripts.chat_eval -a ARC-Easy
@@ -15,9 +15,9 @@ from contextlib import nullcontext
 import torch
 import torch.distributed as dist
 
-from nanochat.common import compute_init, compute_cleanup, get_dist_info, print0, autodetect_device_type
-from nanochat.checkpoint_manager import load_model
-from nanochat.engine import Engine
+from hopechat.common import compute_init, compute_cleanup, get_dist_info, print0, autodetect_device_type
+from hopechat.checkpoint_manager import load_model
+from hopechat.engine import Engine
 
 from tasks.humaneval import HumanEval
 from tasks.mmlu import MMLU
@@ -235,7 +235,7 @@ if __name__ == "__main__":
             print0(f"{task_name} accuracy: {100 * acc:.2f}%")
 
     # Log to report
-    from nanochat.report import get_report
+    from hopechat.report import get_report
     all_tasks_were_evaluated = all(task_name in results for task_name in all_tasks)
     # calculate the ChatCORE metric if we can (similar to CORE, it's the mean centered accuracy)
     # this way, ChatCORE ranges from 0 (at random baseline) to 1 (peak performance)

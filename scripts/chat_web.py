@@ -45,9 +45,9 @@ from pydantic import BaseModel
 from typing import List, Optional, AsyncGenerator
 from dataclasses import dataclass
 from contextlib import nullcontext
-from nanochat.common import compute_init, autodetect_device_type
-from nanochat.checkpoint_manager import load_model
-from nanochat.engine import Engine
+from hopechat.common import compute_init, autodetect_device_type
+from hopechat.checkpoint_manager import load_model
+from hopechat.engine import Engine
 
 # Abuse prevention limits
 MAX_MESSAGES_PER_REQUEST = 500
@@ -223,7 +223,7 @@ def validate_chat_request(request: ChatRequest):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load models on all GPUs on startup."""
-    print("Loading nanochat models across GPUs...")
+    print("Loading hopechat models across GPUs...")
     app.state.worker_pool = WorkerPool(num_gpus=args.num_gpus)
     await app.state.worker_pool.initialize(args.source, model_tag=args.model_tag, step=args.step)
     print(f"Server ready at http://localhost:{args.port}")
@@ -242,7 +242,7 @@ app.add_middleware(
 @app.get("/")
 async def root():
     """Serve the chat UI."""
-    ui_html_path = os.path.join("nanochat", "ui.html")
+    ui_html_path = os.path.join("hopechat", "ui.html")
     with open(ui_html_path, "r", encoding="utf-8") as f:
         html_content = f.read()
     # Replace the API_URL to use the same origin
@@ -256,7 +256,7 @@ async def root():
 @app.get("/logo.svg")
 async def logo():
     """Serve the NanoChat logo for favicon and header."""
-    logo_path = os.path.join("nanochat", "logo.svg")
+    logo_path = os.path.join("hopechat", "logo.svg")
     return FileResponse(logo_path, media_type="image/svg+xml")
 
 async def generate_stream(
